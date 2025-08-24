@@ -1,4 +1,4 @@
-from utils import BaseClass
+from dbks_optimize.utils import BaseClass
 
 class TableOptimizer(BaseClass):
     def compute_table_statistics(self):

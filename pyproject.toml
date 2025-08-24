@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "databricks_optimize"
-version = "0.1.0"
+version = "0.1.5"
 authors = [
   { name="Marco Lombardi", email="m.lombardi@live.it" },
 ]
@@ -20,12 +20,8 @@ classifiers = [
 ]
 
 dependencies = [
-    "pyspark>=3.0.0",
-    "pandas>=1.3.0",
+    "pyspark>=3.0.0"
 ]
-
-[tool.setuptools]
-packages = ["dbks_optimize"]
 
 [tool.setuptools.packages]
 find = {where = ["src"]}

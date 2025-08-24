@@ -149,7 +149,7 @@ class CatalogOptimizer(BaseClass):
 
         self.optimization_dict = opt_dict
     
-    def run_db_optimization(self):
+    def run_catalog_optimization(self):
         self.logger.info(f"Start optimizing catalog {self.object_name}")
         for db in self.object_list:
             msg = f"Start optimizing database {db}"

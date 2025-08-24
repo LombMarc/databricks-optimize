@@ -42,10 +42,10 @@ class BaseClass:
     
     def generate_optimize_statement(self):
         pass
-    
-    def table_pre_optimization(self):
+
+    def generate_partition_statement(self):
         pass
-    
+
     def pre_optimization(self):
         pass
 

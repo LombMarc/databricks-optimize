@@ -49,8 +49,8 @@ class TableOptimizer(BaseClass):
         return optimize_statement
     
     def generate_partition_statement(self,table_statistic):
-        partition_statements = ()
-        optimize_statement = None
+        partition_statements = []
+
         self.logger.info("Generating re-partitioning statements (Multiple query)")
         if table_statistic['PARTITIONING']['IS_SUGGESTED'] == 'Yes' or table_statistic['PARTITIONING']['COLUMNS'] != []:
             if len(table_statistic['PARTITIONING']['COLUMNS']) == 1:
@@ -62,13 +62,12 @@ class TableOptimizer(BaseClass):
                         max_card_col = col
                 part_col = max_card_col
             
-            partition_statements = (f"""
-            CREATE OR REPLACE TABLE {self.object_name}_TEMP
-            PARTITIONED BY ({part_col})
-            AS SELECT * FROM {self.object_name};""",
+            partition_statements = [f"""CREATE OR REPLACE TABLE {self.object_name}_TEMP 
+                                    PARTITIONED BY ({part_col}) AS 
+                                    SELECT * FROM {self.object_name};""",
             f"""DROP TABLE {self.object_name};""",
-            f"""ALTER TABLE {self.object_name}_TEMP RENAME TO {self.object_name};""")
-            return partition_statements
+            f"""ALTER TABLE {self.object_name}_TEMP RENAME TO {self.object_name};"""]
+        return partition_statements
 
     def pre_optimization(self, verbose = True):
         stats = self.compute_table_statistics()
@@ -77,8 +76,13 @@ class TableOptimizer(BaseClass):
         if verbose:
             print(f"----------OPTIMIZE STATEMENT----------\n{optimize_statement}\n\n----------PARTITION STATEMENT----------")
             
-            for i, statement in enumerate(partition_statements):
-                print(f"----------STEP {i}----------\n{statement}\n\n")
+            if partition_statements == []:
+                print("No partition statement generated")
+            elif partition_statements is not None:
+                for i, statement in enumerate(partition_statements):
+                    print(f"----------STEP {i}----------\n{statement}\n\n")
+            else:
+                pass
         
         self.optimize_statement = optimize_statement
         self.partition_statements = partition_statements
@@ -100,6 +104,72 @@ class TableOptimizer(BaseClass):
             self.spark_session.sql(statement)
 
 
+class SchemaOptimizer(BaseClass):
+    def check_table_available(self):
+        df = self.spark_session.sql(f"show tables in {self.object_name}").select("tableName")
+        tables = ['.'.join((self.object_name,i[0])) for i in df.collect() if i[0] != '_sqldf']
+        self.object_list = tables
+
+    def pre_optimization(self):
+        opt_dict = dict()
+        self.check_table_available()
+        for table in self.object_list:
+            optimizer = TableOptimizer(self.spark_session, table)
+            optimizer.pre_optimization()
+            opt_dict[table] = {"optimize_statement": optimizer.optimize_statement, "partition_statements": optimizer.partition_statements}
+
+        self.optimization_dict = opt_dict
+    
+    def run_db_optimization(self, verbose = False):
+        self.logger.info(f"Start optimizing schema {self.object_name}")
+        for table in self.object_list:
+            msg = f"Start optimizing table {table}"
+            self.logger.info(msg)
+            print(msg)
+            self.spark_session.sql(self.optimization_dict[table]["optimize_statement"])
+            if self.optimization_dict[table]["partition_statements"] is not None or self.optimization_dict[table]["partition_statements"] != []:
+                for statement in self.optimization_dict[table]["partition_statements"]:
+                    self.spark_session.sql(statement)
+        
+        self.logger().info(f"End optimizing schema {self.object_name}")
+
+class CatalogOptimizer(BaseClass):
+    def check_db_available(self):
+        df = self.spark_session.sql(f"show schemas in {self.object_name}").collect()
+        list_db = ['.'.join([self.object_name,i[0]]) for i in df if i[0] not in ['default', 'information_schema']]
+        self.object_list = list_db
+
+    def pre_optimization(self):
+        opt_dict = dict()
+        self.check_db_available()
+        for db in self.object_list:
+            optimizer = SchemaOptimizer(self.spark_session, db)
+            optimizer.pre_optimization()
+            opt_dict[db] = {"optimization_dict": optimizer.optimization_dict}
+
+        self.optimization_dict = opt_dict
+    
+    def run_db_optimization(self):
+        self.logger.info(f"Start optimizing catalog {self.object_name}")
+        for db in self.object_list:
+            msg = f"Start optimizing database {db}"
+            self.logger.info(msg)
+            print(msg)
+            db_opt_dict = self.optimization_dict[db]
+            for table in db_opt_dict.keys():
+                msg = f"Start optimizing table {self.object_name}.{db}{table}"
+                self.logger.info(msg)
+                print(msg)
+                self.spark_session.sql(db_opt_dict[table]["optimize_statement"])
+                if db_opt_dict[table]["partition_statements"] is not None or db_opt_dict[table]["partition_statements"] != []:
+                    for statement in db_opt_dict[table]["partition_statements"]:
+                        self.spark_session.sql(statement)
+        
+        self.logger().info(f"End optimizing catalog {self.object_name}")
+
+
+
+            
 
     
          

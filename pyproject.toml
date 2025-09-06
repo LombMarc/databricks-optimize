@@ -25,7 +25,7 @@ classifiers = [
 
 dependencies = [
     "pyspark>=3.0.0",
-    "pytest>=8.4.2",
+    "pytest>=8.3.5",
 ]
 
 [tool.setuptools.packages]

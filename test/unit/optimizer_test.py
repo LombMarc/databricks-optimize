@@ -29,16 +29,6 @@ def test_schema_optimizer_initialization():
     
     assert test_schema.object_name == "catalog.schema"
     assert test_schema.object_type == "schema"
-'''
-def test_catalog_optimizer_initialization():
-    mock_spark = MagicMock()
-
-    test_schema = TableOptimizer(mock_spark, "catalog")
-    
-    assert test_schema.object_name == "catalog"
-    assert test_schema.object_type == "catalog"
-'''
-
 
 
 class TestComputeTableStatistics:
@@ -60,7 +50,7 @@ class TestComputeTableStatistics:
         
         mock_details = Mock()
         mock_details_select = Mock()
-        mock_details_select.collect.return_value = [(500000000,)]  # 0.5GB (500,000,000 bytes)
+        mock_details_select.collect.return_value = [(500000000,)]  # 0.5GB 
         
         mock_details.select.return_value = mock_details_select
         
@@ -87,12 +77,10 @@ class TestComputeTableStatistics:
         #run the method with the overwritte method
         result = self.optimizer.compute_table_statistics()
         
-        # Verify the results for small table
         assert result['PARTITIONING']['IS_SUGGESTED'] == "No"
         assert result['ZORDERING_SUGGESTED_COLUMN'] == "col3"  # highest cardinality
         assert len(result['PARTITIONING']['COLUMNS']) == 0  # no partition cols for small table
         
-        # Verify Spark calls were made
         self.mock_spark.read.table.assert_called_once_with("catalog.schema.table")
         self.mock_spark.sql.assert_called_once_with("DESCRIBE DETAIL catalog.schema.table")
 
@@ -144,7 +132,7 @@ class TestComputeTableStatistics:
             
             mock_details = Mock()
             mock_details_select = Mock()
-            mock_details_select.collect.return_value = [(1500000000,)]  # 1.5GB (1,500,000,000 bytes)
+            mock_details_select.collect.return_value = [(1500000000,)]  # 1.5GB 
             
             mock_details.select.return_value = mock_details_select
             
@@ -191,7 +179,7 @@ class TestComputeTableStatistics:
         
         mock_details = Mock()
         mock_details_select = Mock()
-        mock_details_select.collect.return_value = [(500000000,)]  # 0.5GB (500,000,000 bytes)
+        mock_details_select.collect.return_value = [(500000000,)]  # 0.5GB 
         
         mock_details.select.return_value = mock_details_select
 

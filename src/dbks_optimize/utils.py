@@ -5,6 +5,11 @@ class BaseClass:
     def __init__(self, spark_session : SparkSession, object_name : str, force_partition_on_col : str = None) -> None:
         logger = logging.getLogger(__name__)
         logger.setLevel(logging.INFO)
+        if not logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
         self.logger = logger
         self.spark_session = spark_session
         self.object_name = object_name

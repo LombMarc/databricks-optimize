@@ -2,3 +2,5 @@ dbks_o/
 dist/
 build/
 src/databricks_optimize.egg-info/
+__pycache__
+.DS_Store

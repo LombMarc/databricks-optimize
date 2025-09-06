@@ -21,6 +21,7 @@ class TableOptimizer(BaseClass):
             partition_cols.append(self.force_partition_on_col)
             
         self.logger.info("Check of cardinality and partition size for each column")
+        sugg_partition_col = {'measure': None, 'column': None}
         for col in columns:
             temp = table.select(col)
             cardinality = temp.distinct().count()
@@ -28,8 +29,20 @@ class TableOptimizer(BaseClass):
             cols_info[col] = {"cardinality": cardinality, "records" : temp.count(), "files_size_partition":files_size}
             if cardinality> cols_info[max_card_col]["cardinality"]:
                 max_card_col = col
-            if  1.1e8<files_size<1.5e8:
+            if  1.1e8<files_size<=1.5e8: #file size should be between 110 and 150 Mb
                 partition_cols.append(col)
+            else:
+                mesure_distance = abs(files_size-1.5e8)/files_size
+                if sugg_partition_col['measure'] is None or sugg_partition_col['column'] is None :
+                    sugg_partition_col['measure'] = mesure_distance
+                    sugg_partition_col['column'] = col
+                elif mesure_distance < sugg_partition_col['measure']:
+                    sugg_partition_col['measure'] = mesure_distance
+                    sugg_partition_col['column'] = col
+    
+        if len(partition_cols) == 0 and sugg_partition == 'Yes':
+            partition_cols.append(sugg_partition_col['column'])
+        
 
         stats = {'PARTITIONING' : {
             'IS_SUGGESTED' : sugg_partition,
@@ -39,6 +52,7 @@ class TableOptimizer(BaseClass):
         'COLUMNS_INFO': cols_info
         }
         self.logger.info("generating fina statistics for the object\n-------------------------------------------------")
+        self.statistics = stats
         return stats
 
     def generate_optimize_statement(self, table_statistic):
@@ -70,7 +84,10 @@ class TableOptimizer(BaseClass):
         return partition_statements
 
     def pre_optimization(self, verbose = True):
-        stats = self.compute_table_statistics()
+        if not self.statistics:
+            stats = self.compute_table_statistics()
+        else:
+            stats = self.statistics
         optimize_statement = self.generate_optimize_statement(stats)
         partition_statements = self.generate_partition_statement(stats)
         if verbose:
@@ -102,7 +119,6 @@ class TableOptimizer(BaseClass):
         self.logger.info(f"Start re-partitioning table {self.object_name}")
         for statement in self.partition_statements:
             self.spark_session.sql(statement)
-
 
 class SchemaOptimizer(BaseClass):
     def check_table_available(self):

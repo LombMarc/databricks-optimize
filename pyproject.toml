@@ -11,7 +11,7 @@ authors = [
   { name="Marco Lombardi", email="m.lombardi@live.it" },
 ]
 description = "Databricks utility to identify which column to use for z-ordering and partitioning."
-readme = "README.md"
+readme = "README.MD"
 requires-python = ">=3.8"
 license = { text = "MIT" }
 classifiers = [
